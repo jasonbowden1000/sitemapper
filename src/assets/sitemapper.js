@@ -51,6 +51,7 @@ export default class Sitemapper {
   async fetch(url = this.url) {
     let results = {
       url: "",
+      files: [],
       sites: [],
       errors: [],
     };
@@ -71,6 +72,7 @@ export default class Sitemapper {
 
     return {
       url,
+      files: results.files || [],
       sites: results.sites || [],
       errors: results.errors || [],
     };
@@ -214,6 +216,7 @@ export default class Sitemapper {
         }
 
         return {
+          files: [],
           sites: [],
           errors: [
             {
@@ -240,6 +243,7 @@ export default class Sitemapper {
           })
           .map((site) => site.loc && site.loc[0]);
         return {
+          files: [url],
           sites,
           errors: [],
         };
@@ -267,8 +271,12 @@ export default class Sitemapper {
         const errors = results
           .filter((result) => result.errors.length !== 0)
           .reduce((prev, { errors }) => [...prev, ...errors], []);
+        const files = results
+          .filter((result) => result.files.length !== 0)
+          .reduce((prev, { files }) => [...prev, ...files], []);
 
         return {
+          files,
           sites,
           errors,
         };
@@ -291,6 +299,7 @@ export default class Sitemapper {
 
       // Fail and log error
       return {
+        files: [],
         sites: [],
         errors: [
           {
