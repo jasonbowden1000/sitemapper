@@ -48,36 +48,22 @@ export default class Sitemapper {
       settings.rejectUnauthorized === false ? false : true;
   }
 
-  /**
-   * Gets the sites from a sitemap.xml with a given URL
-   *
-   * @public
-   * @param {string} [url] - the Sitemaps url (e.g https://wp.seantburke.com/sitemap.xml)
-   * @returns {Promise<SitesData>}
-   * @example sitemapper.fetch('example.xml')
-   *  .then((sites) => console.log(sites));
-   */
   async fetch(url = this.url) {
-    // initialize empty variables
     let results = {
       url: "",
       sites: [],
       errors: [],
     };
 
-    // attempt to set the variables with the crawl
     if (this.debug) {
-      // only show if it's set
       if (this.lastmod) {
         console.debug(`Using minimum lastmod value of ${this.lastmod}`);
       }
     }
 
     try {
-      // crawl the URL
       results = await this.crawl(url);
     } catch (e) {
-      // show errors that may occur
       if (this.debug) {
         console.error(e);
       }
@@ -89,93 +75,40 @@ export default class Sitemapper {
       errors: results.errors || [],
     };
   }
-  /**
-   * Get the timeout
-   *
-   * @example console.log(sitemapper.timeout);
-   * @returns {Timeout}
-   */
+
   static get timeout() {
     return this.timeout;
   }
 
-  /**
-   * Set the timeout
-   *
-   * @public
-   * @param {Timeout} duration
-   * @example sitemapper.timeout = 15000; // 15 seconds
-   */
   static set timeout(duration) {
     this.timeout = duration;
   }
 
-  /**
-   * Get the lastmod minimum value
-   *
-   * @example console.log(sitemapper.lastmod);
-   * @returns {Number}
-   */
   static get lastmod() {
     return this.lastmod;
   }
 
-  /**
-   * Set the lastmod minimum value
-   *
-   * @public
-   * @param {Number} timestamp
-   * @example sitemapper.lastmod = 1630694181; // Unix timestamp
-   */
   static set lastmod(timestamp) {
     this.lastmod = timestamp;
   }
 
-  /**
-   *
-   * @param {string} url - url for making requests. Should be a link to a sitemaps.xml
-   * @example sitemapper.url = 'https://wp.seantburke.com/sitemap.xml'
-   */
   static set url(url) {
     this.url = url;
   }
 
-  /**
-   * Get the url to parse
-   * @returns {string}
-   * @example console.log(sitemapper.url)
-   */
   static get url() {
     return this.url;
   }
 
-  /**
-   * Setter for the debug state
-   * @param {Boolean} option - set whether to show debug logs in output.
-   * @example sitemapper.debug = true;
-   */
   static set debug(option) {
     this.debug = option;
   }
 
-  /**
-   * Getter for the debug state
-   * @returns {Boolean}
-   * @example console.log(sitemapper.debug)
-   */
   static get debug() {
     return this.debug;
   }
 
-  /**
-   * Requests the URL and uses parseStringPromise to parse through and find the data
-   *
-   * @private
-   * @param {string} [url] - the Sitemaps url (e.g https://wp.seantburke.com/sitemap.xml)
-   * @returns {Promise<ParseData>}
-   */
   async parse(url = this.url) {
-    // setup the response options for the got request
     const requestOptions = {
       method: "GET",
       resolveWithFullResponse: true,
@@ -188,16 +121,12 @@ export default class Sitemapper {
     };
 
     try {
-      // create a request Promise with the url and request options
       const requester = got.get(url, requestOptions);
 
-      // initialize the timeout method based on the URL, and pass the request object.
       this.initializeTimeout(url, requester);
 
-      // get the response from the requester promise
       const response = await requester;
 
-      // if the response does not have a successful status code then clear the timeout for this url.
       if (!response || response.statusCode !== 200) {
         clearTimeout(this.timeoutTable[url]);
         return { error: response.error, data: response };
@@ -211,13 +140,10 @@ export default class Sitemapper {
         responseBody = response.body;
       }
 
-      // otherwise parse the XML that was returned.
       const data = await parseStringPromise(responseBody);
 
-      // return the results
       return { error: null, data };
     } catch (error) {
-      // If the request was canceled notify the user of the timeout
       if (error.name === "CancelError") {
         return {
           error: `Request timed out after ${this.timeout} milliseconds for url: '${url}'`,
@@ -225,7 +151,6 @@ export default class Sitemapper {
         };
       }
 
-      // If an HTTPError include error http code
       if (error.name === "HTTPError") {
         return {
           error: `HTTP Error occurred: ${error.message}`,
@@ -233,7 +158,6 @@ export default class Sitemapper {
         };
       }
 
-      // Otherwise notify of another error
       return {
         error: `Error occurred: ${error.name}`,
         data: error,
@@ -289,7 +213,6 @@ export default class Sitemapper {
           );
         }
 
-        // Fail and log error
         return {
           sites: [],
           errors: [
@@ -386,32 +309,6 @@ export default class Sitemapper {
   }
 
   /**
-   * Gets the sites from a sitemap.xml with a given URL
-   *
-   * @deprecated
-   * @param {string} url - url to query
-   * @param {getSitesCallback} callback - callback for sites and error
-   * @callback
-   */
-  async getSites(url = this.url, callback) {
-    console.warn(
-      // eslint-disable-line no-console
-      "\r\nWarning:",
-      "function .getSites() is deprecated, please use the function .fetch()\r\n"
-    );
-
-    let err = {};
-    let sites = [];
-    try {
-      const response = await this.fetch(url);
-      sites = response.sites;
-    } catch (error) {
-      err = error;
-    }
-    return callback(err, sites);
-  }
-
-  /**
    * Decompress the gzipped response body using zlib.gunzip
    *
    * @param {Buffer} body - body of the gzipped file
@@ -431,116 +328,3 @@ export default class Sitemapper {
   }
 }
 
-/**
- * Callback for the getSites method
- *
- * @callback getSitesCallback
- * @param {Object} error - error from callback
- * @param {Array} sites - an Array of sitemaps
- */
-
-/**
- * Timeout in milliseconds
- *
- * @typedef {Number} Timeout
- * the number of milliseconds before all requests timeout. The promises will still resolve so
- * you'll still receive parts of the request, but maybe not all urls
- * default is 15000 which is 15 seconds
- */
-
-/**
- * Resolve handler type for the promise in this.parse()
- *
- * @typedef {Object} ParseData
- *
- * @property {Error} error that either comes from `parseStringPromise` or `got` or custom error
- * @property {Object} data
- * @property {string} data.url - URL of sitemap
- * @property {Array} data.urlset - Array of returned URLs
- * @property {string} data.urlset.url - single Url
- * @property {Object} data.sitemapindex - index of sitemap
- * @property {string} data.sitemapindex.sitemap - Sitemap
- * @example {
- *   error: 'There was an error!'
- *   data: {
- *     url: 'https://linkedin.com',
- *     urlset: [{
- *       url: 'https://www.linkedin.com/project1'
- *     },[{
- *       url: 'https://www.linkedin.com/project2'
- *     }]
- *   }
- * }
- */
-
-/**
- * Resolve handler type for the promise in this.parse()
- *
- * @typedef {Object} SitesData
- *
- * @property {string} url - the original url used to query the data
- * @property {SitesArray} sites
- * @property {ErrorDataArray} errors
- * @example {
- *   url: 'https://linkedin.com/sitemap.xml',
- *   sites: [
- *     'https://linkedin.com/project1',
- *     'https://linkedin.com/project2'
- *   ],
- *   errors: [
- *      {
- *        type: 'CancelError',
- *        url: 'https://www.walmart.com/sitemap_tp1.xml',
- *        retries: 0
- *      },
- *      {
- *        type: 'HTTPError',
- *        url: 'https://www.walmart.com/sitemap_tp2.xml',
- *        retries: 0
- *      },
- *   ]
- * }
- */
-
-/**
- * An array of urls
- *
- * @typedef {String[]} SitesArray
- * @example [
- *   'https://www.google.com',
- *   'https://www.linkedin.com'
- * ]
- */
-
-/**
- * An array of Error data objects
- *
- * @typedef {ErrorData[]} ErrorDataArray
- * @example [
- *    {
- *      type: 'CancelError',
- *      url: 'https://www.walmart.com/sitemap_tp1.xml',
- *      retries: 0
- *    },
- *    {
- *      type: 'HTTPError',
- *      url: 'https://www.walmart.com/sitemap_tp2.xml',
- *      retries: 0
- *    },
- * ]
- */
-
-/**
- * An object containing details about the errors which occurred during the crawl
- *
- * @typedef {Object} ErrorData
- *
- * @property {string} type - The error type which was returned
- * @property {string} url - The sitemap URL which returned the error
- * @property {Number} errors - The total number of retries attempted after receiving the first error
- * @example {
- *    type: 'CancelError',
- *    url: 'https://www.walmart.com/sitemap_tp1.xml',
- *    retries: 0
- * }
- */
